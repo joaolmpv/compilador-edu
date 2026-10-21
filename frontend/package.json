@@ -1,0 +1,12 @@
+{
+  "name": "compilador-edu-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Testes automatizados do frontend do software educacional de compiladores",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}

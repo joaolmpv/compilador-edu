@@ -3,14 +3,51 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Software Educacional de Compiladores</title>
+  <title>Software Educacional de Compiladores — Python</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <main>
-    <h1>Software Educacional de Compiladores</h1>
-    <p id="message">Carregando...</p>
+    <header>
+      <h1>Software Educacional de Compiladores</h1>
+      <p class="subtitulo">
+        Linguagem analisada: <strong>Python</strong>
+        (subconjunto: variáveis, operadores aritméticos e estruturas condicionais)
+      </p>
+    </header>
+
+    <section class="painel">
+      <div class="campo">
+        <label for="exemplo-select">Exemplos prontos</label>
+        <select id="exemplo-select">
+          <option value="" selected>Selecione um exemplo...</option>
+          <option value="0">Exemplo 1 — Declaração de variável</option>
+          <option value="1">Exemplo 2 — Operação aritmética</option>
+          <option value="2">Exemplo 3 — Estrutura condicional</option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label for="codigo-input">Código-fonte (Python)</label>
+        <textarea
+          id="codigo-input"
+          rows="10"
+          spellcheck="false"
+          placeholder="Escreva ou cole aqui o código Python que deseja analisar..."
+        ></textarea>
+      </div>
+
+      <button id="analisar-btn" type="button">Analisar código</button>
+
+      <div class="campo">
+        <label>Resultado</label>
+        <div id="resultado" class="resultado" role="status" aria-live="polite">
+          Aguardando envio de um código-fonte.
+        </div>
+      </div>
+    </section>
   </main>
+
   <script src="script.js"></script>
 </body>
 </html>
