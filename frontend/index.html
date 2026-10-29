@@ -24,6 +24,7 @@
           <option value="0">Exemplo 1 — Declaração de variável</option>
           <option value="1">Exemplo 2 — Operação aritmética</option>
           <option value="2">Exemplo 3 — Estrutura condicional</option>
+          <option value="3">Exemplo 4 — Erro léxico intencional</option>
         </select>
       </div>
 
@@ -31,19 +32,67 @@
         <label for="codigo-input">Código-fonte (Python)</label>
         <textarea
           id="codigo-input"
-          rows="10"
+          rows="8"
           spellcheck="false"
           placeholder="Escreva ou cole aqui o código Python que deseja analisar..."
         ></textarea>
       </div>
 
-      <button id="analisar-btn" type="button">Analisar código</button>
+      <button id="analisar-btn" type="button">▶ Analisar código</button>
 
-      <div class="campo">
-        <label>Resultado</label>
-        <div id="resultado" class="resultado" role="status" aria-live="polite">
-          Aguardando envio de um código-fonte.
+      <!-- Resultado textual (erros de validação / comunicação) -->
+      <div id="resultado-msg" class="resultado" role="status" aria-live="polite" style="display:none"></div>
+
+      <!-- Resultado da análise léxica -->
+      <div id="resultado-lexico" style="display:none">
+
+        <div class="resumo-tokens" id="resumo-tokens"></div>
+
+        <div id="secao-erros" style="display:none">
+          <h3 class="secao-titulo erro-titulo">⚠ Erros léxicos encontrados</h3>
+          <p class="dica-educacional">
+            Um <strong>erro léxico</strong> ocorre quando o scanner encontra um caractere ou
+            sequência que não pertence ao vocabulário da linguagem. O scanner continua
+            processando o restante do código, acumulando todos os erros de uma vez.
+          </p>
+          <div id="tabela-erros-wrapper">
+            <table class="tabela-tokens" id="tabela-erros">
+              <thead><tr><th>Linha</th><th>Col.</th><th>Lexema</th><th>Mensagem</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </div>
+
+        <div id="secao-tokens">
+          <h3 class="secao-titulo">🔍 Tokens identificados</h3>
+          <p class="dica-educacional">
+            Um <strong>token</strong> é a unidade mínima com significado para a linguagem.
+            O <strong>lexema</strong> é a sequência de caracteres que forma o token no código-fonte.
+            O scanner percorre o código da esquerda para a direita, agrupando caracteres e
+            classificando cada grupo em uma categoria.
+          </p>
+          <div class="contagem-categorias" id="contagem-categorias"></div>
+          <div id="tabela-tokens-wrapper">
+            <table class="tabela-tokens" id="tabela-tokens">
+              <thead><tr><th>#</th><th>Tipo</th><th>Lexema</th><th>Linha</th><th>Col.</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="legenda">
+      <h3>Categorias de tokens</h3>
+      <div class="legenda-itens">
+        <span class="badge PALAVRA_RESERVADA">Palavra reservada</span>
+        <span class="badge IDENTIFICADOR">Identificador</span>
+        <span class="badge LITERAL_INTEIRO">Literal inteiro</span>
+        <span class="badge LITERAL_FLOAT">Literal float</span>
+        <span class="badge LITERAL_STRING">Literal string</span>
+        <span class="badge OPERADOR">Operador</span>
+        <span class="badge DELIMITADOR">Delimitador</span>
       </div>
     </section>
   </main>

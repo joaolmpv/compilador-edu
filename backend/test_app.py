@@ -57,11 +57,15 @@ def test_health(client):
     ],
 )
 def test_analisar_codigo_valido(client, codigo):
+    """Etapa 3: resposta agora retorna tokens/erros/sucesso em vez de recebido/mensagem."""
     resp = client.post("/api/analisar", json={"codigo": codigo})
     data = resp.get_json()
     assert resp.status_code == 200
-    assert data["recebido"] is True
-    assert "sucesso" in data["mensagem"].lower()
+    assert "sucesso" in data
+    assert "tokens" in data
+    assert "erros" in data
+    assert isinstance(data["tokens"], list)
+    assert isinstance(data["erros"], list)
 
 
 # --- /api/analisar: validações de entrada ---

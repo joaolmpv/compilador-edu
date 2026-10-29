@@ -1,22 +1,22 @@
 """
 Backend do software educacional de compiladores.
 
-Etapa 2: além da rota de verificação ("Hello, World!"), o backend agora
-expõe a rota /api/analisar, responsável por receber o código-fonte
-enviado pela interface web, validar a entrada e devolver uma resposta
-estruturada em JSON.
+Etapa 3: o endpoint /api/analisar agora executa o analisador léxico
+(scanner) sobre o código-fonte recebido e retorna a lista de tokens
+classificados, a lista de erros léxicos e um indicador de sucesso.
 
-Nesta etapa o backend ainda NÃO realiza análise léxica, sintática ou
-semântica: essas funcionalidades serão implementadas nas próximas
-etapas. O foco aqui é a validação da entrada e o contrato de
-comunicação entre frontend e backend.
+As rotas /api/hello e /api/health são mantidas (regressão das Etapas 1
+e 2). O contrato de /api/analisar é atualizado para incluir "tokens",
+"erros" e "sucesso" na resposta, conforme documentado no README.
 """
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+from scanner import analisar_lexico
+
 app = Flask(__name__)
-CORS(app)  # mantido por segurança, embora o nginx já faça proxy same-origin
+CORS(app)
 
 
 @app.get("/api/hello")
@@ -31,16 +31,18 @@ def health():
 
 @app.post("/api/analisar")
 def analisar():
-    """Recebe o código-fonte, valida a entrada e confirma o recebimento.
+    """Valida a entrada e executa o scanner léxico.
 
-    Contrato de comunicação:
-        Requisição (JSON): {"codigo": "<código-fonte>"}
-        Resposta de sucesso (200): {"mensagem": str, "recebido": true}
-        Resposta de erro   (400): {"mensagem": str, "recebido": false}
-
-    Nesta etapa não é realizada nenhuma análise léxica, sintática ou
-    semântica: o backend apenas valida a entrada e confirma o
-    recebimento, conforme escopo da Etapa 2.
+    Contrato de comunicação (Etapa 3):
+        Requisição  (JSON): {"codigo": "<código-fonte>"}
+        Resposta 200:
+            {
+                "sucesso": bool,
+                "tokens": [{"tipo", "lexema", "linha", "coluna"}, ...],
+                "erros":  [{"tipo", "lexema", "linha", "coluna", "mensagem"}, ...]
+            }
+        Resposta 400 (entrada inválida):
+            {"mensagem": str, "recebido": false}
     """
     data = request.get_json(silent=True)
 
@@ -53,16 +55,10 @@ def analisar():
     codigo = data.get("codigo")
 
     if codigo is None:
-        return jsonify(
-            mensagem="Campo 'codigo' é obrigatório.",
-            recebido=False,
-        ), 400
+        return jsonify(mensagem="Campo 'codigo' é obrigatório.", recebido=False), 400
 
     if not isinstance(codigo, str):
-        return jsonify(
-            mensagem="Campo 'codigo' deve ser uma string.",
-            recebido=False,
-        ), 400
+        return jsonify(mensagem="Campo 'codigo' deve ser uma string.", recebido=False), 400
 
     if codigo.strip() == "":
         return jsonify(
@@ -70,12 +66,8 @@ def analisar():
             recebido=False,
         ), 400
 
-    # Confirmação de recebimento. A análise léxica/sintática/semântica
-    # propriamente dita será implementada nas próximas etapas.
-    return jsonify(
-        mensagem="Código recebido com sucesso.",
-        recebido=True,
-    ), 200
+    resultado = analisar_lexico(codigo)
+    return jsonify(resultado), 200
 
 
 @app.errorhandler(404)
@@ -90,7 +82,6 @@ def method_not_allowed(_err):
 
 @app.errorhandler(Exception)
 def handle_unexpected_error(_err):
-    # Mensagem genérica — nunca expor detalhes internos ao usuário.
     return jsonify(
         mensagem="Ocorreu um erro inesperado no servidor. Tente novamente.",
         recebido=False,
@@ -98,5 +89,4 @@ def handle_unexpected_error(_err):
 
 
 if __name__ == "__main__":
-    # host 0.0.0.0 é necessário para o serviço ser acessível de fora do contêiner
     app.run(host="0.0.0.0", port=5000)

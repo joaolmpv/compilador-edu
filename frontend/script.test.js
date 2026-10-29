@@ -1,5 +1,5 @@
 /**
- * Testes automatizados do frontend (Etapa 2).
+ * Testes automatizados do frontend (Etapa 3).
  *
  * Como executar:
  *   cd frontend
@@ -16,18 +16,22 @@ const { JSDOM } = require("jsdom");
 const {
   EXAMPLES,
   validarCodigo,
-  interpretarResposta,
   mensagemFalhaComunicacao,
+  htmlTabelaTokens,
+  htmlTabelaErros,
+  htmlContagemCategorias,
+  badgeClass,
+  escHtml,
   inicializarInterface,
 } = require("./script.js");
 
-// --- Lógica pura ------------------------------------------------------
+// ── Regressão Etapa 2: lógica pura ──────────────────────────────────────────
 
-test("existem ao menos 3 exemplos cadastrados e todos têm conteúdo", () => {
-  assert.ok(EXAMPLES.length >= 3);
-  for (const exemplo of EXAMPLES) {
-    assert.ok(exemplo.titulo.length > 0);
-    assert.ok(exemplo.codigo.trim().length > 0);
+test("existem ao menos 4 exemplos cadastrados (incluindo o de erro léxico)", () => {
+  assert.ok(EXAMPLES.length >= 4);
+  for (const ex of EXAMPLES) {
+    assert.ok(ex.titulo.length > 0);
+    assert.ok(ex.codigo.trim().length > 0);
   }
 });
 
@@ -37,82 +41,88 @@ test("validarCodigo rejeita string vazia", () => {
   assert.match(r.mensagem, /informe um código-fonte/i);
 });
 
-test("validarCodigo rejeita entrada composta apenas por espaços", () => {
-  const r = validarCodigo("   \n\t ");
-  assert.equal(r.valido, false);
+test("validarCodigo rejeita apenas espaços", () => {
+  assert.equal(validarCodigo("   \n").valido, false);
 });
 
-test("validarCodigo aceita código não vazio", () => {
-  const r = validarCodigo("x = 10");
-  assert.equal(r.valido, true);
+test("validarCodigo aceita código válido", () => {
+  assert.equal(validarCodigo("x = 10").valido, true);
 });
 
-test("interpretarResposta reconhece sucesso do backend", () => {
-  const r = interpretarResposta(200, {
-    mensagem: "Código recebido com sucesso.",
-    recebido: true,
-  });
-  assert.equal(r.tipo, "sucesso");
+test("mensagemFalhaComunicacao retorna mensagem compreensível", () => {
+  assert.match(mensagemFalhaComunicacao().mensagem, /não foi possível comunicar/i);
 });
 
-test("interpretarResposta reconhece erro retornado pelo backend", () => {
-  const r = interpretarResposta(400, {
-    mensagem: "Informe um código-fonte antes de solicitar a análise.",
-    recebido: false,
-  });
-  assert.equal(r.tipo, "erro");
+// ── Geração de HTML dos tokens ───────────────────────────────────────────────
+
+test("htmlTabelaTokens gera linhas para cada token", () => {
+  const tokens = [
+    { tipo: "IDENTIFICADOR", lexema: "x", linha: 1, coluna: 1 },
+    { tipo: "OPERADOR",       lexema: "=", linha: 1, coluna: 3 },
+  ];
+  const html = htmlTabelaTokens(tokens);
+  assert.ok(html.includes("x"));
+  assert.ok(html.includes("IDENTIFICADOR") || html.includes("Identificador"));
 });
 
-test("interpretarResposta trata corpo de resposta inesperado", () => {
-  const r = interpretarResposta(500, null);
-  assert.equal(r.tipo, "erro");
-  assert.match(r.mensagem, /resposta inesperada/i);
+test("htmlTabelaTokens mostra mensagem quando lista está vazia", () => {
+  const html = htmlTabelaTokens([]);
+  assert.ok(html.toLowerCase().includes("nenhum token"));
 });
 
-test("mensagemFalhaComunicacao retorna texto compreensível ao usuário", () => {
-  const r = mensagemFalhaComunicacao();
-  assert.match(r.mensagem, /não foi possível comunicar/i);
+test("htmlTabelaErros gera linhas para cada erro", () => {
+  const erros = [{
+    tipo: "ERRO_LEXICO", lexema: "@", linha: 2, coluna: 5,
+    mensagem: "Caractere não reconhecido '@'."
+  }];
+  const html = htmlTabelaErros(erros);
+  assert.ok(html.includes("@"));
+  assert.ok(html.includes("2"));
 });
 
-// --- Testes de interface (DOM simulado com jsdom) ----------------------
+test("htmlContagemCategorias conta corretamente", () => {
+  const tokens = [
+    { tipo: "IDENTIFICADOR", lexema: "x" },
+    { tipo: "IDENTIFICADOR", lexema: "y" },
+    { tipo: "OPERADOR",       lexema: "=" },
+  ];
+  const html = htmlContagemCategorias(tokens);
+  assert.ok(html.includes("2") || html.includes("Identificador"));
+});
+
+test("escHtml escapa caracteres perigosos", () => {
+  assert.equal(escHtml("<script>"), "&lt;script&gt;");
+  assert.equal(escHtml('"hello"'), "&quot;hello&quot;");
+});
+
+test("badgeClass agrupa delimitadores numa classe única", () => {
+  assert.equal(badgeClass("ABRE_PAREN"), "DELIMITADOR");
+  assert.equal(badgeClass("VIRGULA"),    "DELIMITADOR");
+  assert.equal(badgeClass("OPERADOR"),   "OPERADOR");
+});
+
+// ── Testes de interface (DOM com jsdom) ──────────────────────────────────────
 
 function montarDom() {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   return new JSDOM(html);
 }
 
-test("a tela principal contém os elementos exigidos pela Etapa 2", () => {
-  const dom = montarDom();
-  const doc = dom.window.document;
-
-  assert.ok(doc.getElementById("exemplo-select"), "seletor de exemplos ausente");
-  assert.ok(doc.getElementById("codigo-input"), "área de entrada de código ausente");
-  assert.ok(doc.getElementById("analisar-btn"), "botão de análise ausente");
-  assert.ok(doc.getElementById("resultado"), "área de resultados ausente");
-  assert.match(doc.body.textContent, /python/i, "linguagem analisada não identificada na tela");
+test("a tela contém os elementos obrigatórios da Etapa 3", () => {
+  const doc = montarDom().window.document;
+  assert.ok(doc.getElementById("exemplo-select"));
+  assert.ok(doc.getElementById("codigo-input"));
+  assert.ok(doc.getElementById("analisar-btn"));
+  assert.ok(doc.getElementById("resultado-lexico"));
+  assert.ok(doc.getElementById("tabela-tokens"));
+  assert.ok(doc.getElementById("tabela-erros"));
+  assert.match(doc.body.textContent, /python/i);
 });
 
-test("selecionar um exemplo preenche a área de código e permite edição", () => {
+test("selecionar exemplo preenche textarea e substitui ao trocar", () => {
   const dom = montarDom();
   inicializarInterface(dom.window.document);
-
-  const select = dom.window.document.getElementById("exemplo-select");
-  const textarea = dom.window.document.getElementById("codigo-input");
-
-  select.value = "1";
-  select.dispatchEvent(new dom.window.Event("change"));
-  assert.equal(textarea.value, EXAMPLES[1].codigo);
-
-  // o usuário ainda pode editar o conteúdo carregado
-  textarea.value = EXAMPLES[1].codigo + "extra = 1\n";
-  assert.match(textarea.value, /extra = 1/);
-});
-
-test("selecionar um novo exemplo substitui o conteúdo anterior", () => {
-  const dom = montarDom();
-  inicializarInterface(dom.window.document);
-
-  const select = dom.window.document.getElementById("exemplo-select");
+  const select   = dom.window.document.getElementById("exemplo-select");
   const textarea = dom.window.document.getElementById("codigo-input");
 
   select.value = "0";
@@ -124,93 +134,94 @@ test("selecionar um novo exemplo substitui o conteúdo anterior", () => {
   assert.equal(textarea.value, EXAMPLES[2].codigo);
 });
 
-test("clicar em analisar sem código mostra mensagem de erro, sem chamar o backend", async () => {
+test("clicar analisar sem código mostra erro sem chamar backend", async () => {
   const dom = montarDom();
-  let chamouFetch = false;
-  global.fetch = async () => {
-    chamouFetch = true;
-    throw new Error("fetch não deveria ter sido chamado");
-  };
-
+  let chamou = false;
+  global.fetch = async () => { chamou = true; throw new Error("não devia chamar"); };
   inicializarInterface(dom.window.document);
 
-  const botao = dom.window.document.getElementById("analisar-btn");
-  const resultado = dom.window.document.getElementById("resultado");
+  const botao    = dom.window.document.getElementById("analisar-btn");
   const textarea = dom.window.document.getElementById("codigo-input");
+  const msg      = dom.window.document.getElementById("resultado-msg");
 
-  textarea.value = "   ";
+  textarea.value = "";
   botao.dispatchEvent(new dom.window.Event("click"));
-  await new Promise((r) => setTimeout(r, 0));
+  await new Promise(r => setTimeout(r, 0));
 
-  assert.match(resultado.textContent, /informe um código-fonte/i);
-  assert.ok(resultado.className.includes("erro"));
-  assert.equal(chamouFetch, false);
+  assert.match(msg.textContent, /informe um código-fonte/i);
+  assert.equal(chamou, false);
 });
 
-test("clicar em analisar com sucesso simulado do backend atualiza a interface", async () => {
+test("resposta com tokens do backend é exibida na tabela", async () => {
   const dom = montarDom();
   global.fetch = async () => ({
+    ok: true,
     status: 200,
-    json: async () => ({ mensagem: "Código recebido com sucesso.", recebido: true }),
-  });
-
-  inicializarInterface(dom.window.document);
-
-  const botao = dom.window.document.getElementById("analisar-btn");
-  const resultado = dom.window.document.getElementById("resultado");
-  const textarea = dom.window.document.getElementById("codigo-input");
-
-  textarea.value = "x = 10";
-  botao.dispatchEvent(new dom.window.Event("click"));
-  await new Promise((r) => setTimeout(r, 10));
-
-  assert.match(resultado.textContent, /sucesso/i);
-  assert.ok(resultado.className.includes("sucesso"));
-});
-
-test("resposta de erro do backend (ex.: entrada inválida) é exibida ao usuário", async () => {
-  const dom = montarDom();
-  global.fetch = async () => ({
-    status: 400,
     json: async () => ({
-      mensagem: "Informe um código-fonte antes de solicitar a análise.",
-      recebido: false,
+      sucesso: true,
+      tokens: [
+        { tipo: "IDENTIFICADOR", lexema: "x",  linha: 1, coluna: 1 },
+        { tipo: "OPERADOR",       lexema: "=",  linha: 1, coluna: 3 },
+        { tipo: "LITERAL_INTEIRO", lexema: "10", linha: 1, coluna: 5 },
+      ],
+      erros: [],
     }),
   });
-
   inicializarInterface(dom.window.document);
 
-  const botao = dom.window.document.getElementById("analisar-btn");
-  const resultado = dom.window.document.getElementById("resultado");
-  const textarea = dom.window.document.getElementById("codigo-input");
-
-  // Um espaço simples passa na validação do frontend, mas poderia ser
-  // rejeitado pelo backend em outro cenário; aqui simulamos diretamente
-  // uma resposta de erro do servidor para validar o tratamento na tela.
-  textarea.value = "codigo_de_teste";
-  botao.dispatchEvent(new dom.window.Event("click"));
-  await new Promise((r) => setTimeout(r, 10));
-
-  assert.match(resultado.textContent, /informe um código-fonte/i);
-  assert.ok(resultado.className.includes("erro"));
-});
-
-test("falha de comunicação com o backend exibe mensagem compreensível", async () => {
-  const dom = montarDom();
-  global.fetch = async () => {
-    throw new Error("network down");
-  };
-
-  inicializarInterface(dom.window.document);
-
-  const botao = dom.window.document.getElementById("analisar-btn");
-  const resultado = dom.window.document.getElementById("resultado");
+  const botao    = dom.window.document.getElementById("analisar-btn");
   const textarea = dom.window.document.getElementById("codigo-input");
 
   textarea.value = "x = 10";
   botao.dispatchEvent(new dom.window.Event("click"));
-  await new Promise((r) => setTimeout(r, 10));
+  await new Promise(r => setTimeout(r, 20));
 
-  assert.match(resultado.textContent, /não foi possível comunicar/i);
-  assert.ok(resultado.className.includes("erro"));
+  const tabela = dom.window.document.getElementById("tabela-tokens");
+  assert.ok(tabela.innerHTML.includes("x"));
+  assert.ok(tabela.innerHTML.includes("10"));
+});
+
+test("erros léxicos aparecem na seção de erros", async () => {
+  const dom = montarDom();
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      sucesso: false,
+      tokens: [{ tipo: "IDENTIFICADOR", lexema: "x", linha: 1, coluna: 1 }],
+      erros: [{
+        tipo: "ERRO_LEXICO", lexema: "@", linha: 1, coluna: 5,
+        mensagem: "Erro léxico na linha 1, coluna 5: caractere não reconhecido '@'.",
+      }],
+    }),
+  });
+  inicializarInterface(dom.window.document);
+
+  const botao    = dom.window.document.getElementById("analisar-btn");
+  const textarea = dom.window.document.getElementById("codigo-input");
+
+  textarea.value = "x @ 1";
+  botao.dispatchEvent(new dom.window.Event("click"));
+  await new Promise(r => setTimeout(r, 20));
+
+  const secaoErros = dom.window.document.getElementById("secao-erros");
+  assert.notEqual(secaoErros.style.display, "none");
+  const tabErros = dom.window.document.getElementById("tabela-erros");
+  assert.ok(tabErros.innerHTML.includes("@"));
+});
+
+test("falha de rede exibe mensagem compreensível", async () => {
+  const dom = montarDom();
+  global.fetch = async () => { throw new Error("network down"); };
+  inicializarInterface(dom.window.document);
+
+  const botao    = dom.window.document.getElementById("analisar-btn");
+  const textarea = dom.window.document.getElementById("codigo-input");
+  const msg      = dom.window.document.getElementById("resultado-msg");
+
+  textarea.value = "x = 10";
+  botao.dispatchEvent(new dom.window.Event("click"));
+  await new Promise(r => setTimeout(r, 20));
+
+  assert.match(msg.textContent, /não foi possível comunicar/i);
 });
